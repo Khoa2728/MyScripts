@@ -1,13 +1,14 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local WEBHOOK_URL = _G.WebhookURL 
+local WEBHOOK_URL = _G.WebhookURL
 
 if not WEBHOOK_URL or WEBHOOK_URL == "" then
     warn("⚠️ [LỖI] Chưa nhập link Webhook vào biến _G.WebhookURL")
     return
 end
 
+-- Lấy mốc Bounty/Honor ngay khi chạy script
 local last_bounty = player.leaderstats["Bounty/Honor"].Value
 
 function send_notif(status, diff, color)
@@ -21,7 +22,7 @@ function send_notif(status, diff, color)
             ["color"] = color,
             ["fields"] = {
                 {
-                    ["name"] = "🏷️  Username",
+                    ["name"] = "🏷️ Username",
                     ["value"] = "```" .. player.DisplayName .. "```",
                     ["inline"] = true
                 },
@@ -32,7 +33,7 @@ function send_notif(status, diff, color)
                 },
                 {
                     ["name"] = "⚔️ Bounty/Honor Gained",
-                    ["value"] = "```" .. prefix .. tostring(diff) .. "```", -- Đây là số bounty vừa ăn được
+                    ["value"] = "```" .. prefix .. tostring(diff) .. "```",
                     ["inline"] = true
                 },
                 {
@@ -54,21 +55,30 @@ function send_notif(status, diff, color)
     local payload = HttpService:JSONEncode(data)
     
     pcall(function()
-        local request = (syn and syn.request or http_request or request or HttpPost)
-        request({
-            Url = WEBHOOK_URL,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = payload
-        })
+        -- Tối ưu hóa request để tương thích với nhiều Executor
+        local req = (syn and syn.request or http_request or request or HttpPost)
+        if req then
+            req({
+                Url = WEBHOOK_URL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = payload
+            })
+        else
+            -- Nếu Executor quá cũ không có hàm request
+            HttpService:PostAsync(WEBHOOK_URL, payload)
+        end
     end)
 end
 
+-- Vòng lặp kiểm tra Bounty mỗi giây
 task.spawn(function()
     while task.wait(1) do 
-        local current_bounty = player.leaderstats["Bounty/Honor"].Value
+        local success, current_bounty = pcall(function() 
+            return player.leaderstats["Bounty/Honor"].Value 
+        end)
         
-        if current_bounty ~= last_bounty then
+        if success and current_bounty ~= last_bounty then
             local diff = current_bounty - last_bounty
             
             if diff > 0 then
