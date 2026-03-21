@@ -37,7 +37,7 @@ function send_notif(status, diff, color)
                 },
                 {
                     ["name"] = "✅ Status",
-                    ["value"] = "```" .. 🟢 Online .. "```",
+                    ["value"] = "🟢 Online",
                     ["inline"] = false
                 }
             },
