@@ -42,7 +42,7 @@ function send_notif(status, diff, color)
                 }
             },
             ["image"] = {
-                ["url"] = "https://i.pinimg.com/originals/75/dd/c0/75ddc05c78d9168fa4296a75569b8fe1.gif" 
+                ["url"] = "https://photo.znews.vn/Uploaded/mdf_drkydd/2016_12_18/12.gif" 
             },
             ["footer"] = {
                 ["text"] = "Script by tuitenphaa • " .. os.date("%X"),
