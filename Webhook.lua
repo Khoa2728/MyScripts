@@ -8,16 +8,18 @@ if not WEBHOOK_URL or WEBHOOK_URL == "" then
     return
 end
 
--- Lấy mốc Bounty/Honor ngay khi chạy script
 local last_bounty = player.leaderstats["Bounty/Honor"].Value
+local has_sent_initial = false 
 
-function send_notif(status, diff, color)
-    local prefix = (diff > 0) and "+" or "" 
+function send_notif(title, diff, color, is_start)
     local current_bounty = player.leaderstats["Bounty/Honor"].Value
+    local prefix = ""
+    
+    local diff_text = is_start and "+0" or ((diff > 0 and "+" or "") .. tostring(diff))
     
     local data = {
         ["embeds"] = {{
-            ["title"] = "📈 BOUNTY UPDATE ⚔️",
+            ["title"] = title,
             ["description"] = "Real-time report for: **@" .. player.Name .. "**",
             ["color"] = color,
             ["fields"] = {
@@ -33,7 +35,7 @@ function send_notif(status, diff, color)
                 },
                 {
                     ["name"] = "⚔️ Bounty/Honor Gained",
-                    ["value"] = "```" .. prefix .. tostring(diff) .. "```",
+                    ["value"] = "```" .. diff_text .. "```",
                     ["inline"] = true
                 },
                 {
@@ -53,41 +55,39 @@ function send_notif(status, diff, color)
     }
 
     local payload = HttpService:JSONEncode(data)
-    
     pcall(function()
-        -- Tối ưu hóa request để tương thích với nhiều Executor
         local req = (syn and syn.request or http_request or request or HttpPost)
         if req then
-            req({
-                Url = WEBHOOK_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = payload
-            })
+            req({Url = WEBHOOK_URL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = payload})
         else
-            -- Nếu Executor quá cũ không có hàm request
             HttpService:PostAsync(WEBHOOK_URL, payload)
         end
     end)
 end
 
--- Vòng lặp kiểm tra Bounty mỗi giây
+task.spawn(function()
+    send_notif("📈 BOUNTY NOTIFICATION ⚔️", 0, 16777215, true) 
+    has_sent_initial = true
+end)
+
 task.spawn(function()
     while task.wait(1) do 
         local success, current_bounty = pcall(function() 
             return player.leaderstats["Bounty/Honor"].Value 
         end)
         
-        if success and current_bounty ~= last_bounty then
-            local diff = current_bounty - last_bounty
-            
-            if diff > 0 then
-                send_notif("WINNER ✅", diff, 65280) 
-            elseif diff < 0 then
-                send_notif("LOSER ❌", diff, 16711680) 
+        if success and has_sent_initial then
+            if current_bounty ~= last_bounty then
+                local diff = current_bounty - last_bounty
+                
+                if diff > 0 then
+                    send_notif("📈 BOUNTY UPDATE ✅", diff, 65280, false) 
+                elseif diff < 0 then
+                    send_notif("📈 BOUNTY UPDATE ❌", diff, 16711680, false) 
+                end
+                
+                last_bounty = current_bounty 
             end
-            
-            last_bounty = current_bounty 
         end
     end
 end)
